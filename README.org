@@ -1,0 +1,46 @@
+** Stags
+
+   It is lightweight tagging backend for c++ backed by [[http://clang.llvm.org/doxygen/group__CINDEX.html][libclang]]. It
+   stores parsed data to database file(import shelves) which supports
+   key & value format.
+
+   Stags stands for =simple= tag.
+
+** Goals
+
+   Though it was started as a toy project, it has clear goals from the
+   beginning.
+
+   1. Represent tagging data structure as key & value format to
+      database file
+   2. Avoid regression by functional and unit tests
+   3. High performace
+      1. Fast parsing time(currently, the slowest in the planet)
+      2. Fast lookup time
+      3. Fast update time(reparse time)
+   4. Support Emacs as primary frontend
+   5. Practice code refactoring from this project
+
+** How to participate
+
+   1. Any pull-request with test case is welcome
+   2. Any code refactoring is welcome(even better with new test case
+      if necessary)
+   3. Meet any of goals in the above
+
+** How to use
+
+   1. Parse project
+      #+BEGIN_EXAMPLE
+        $ cd /path/to/stags
+        $ python stags/project.py project_dir_has_compile_commands.json project_top parse
+        # stags.db will be created
+      #+END_EXAMPLE
+
+   2. In Emacs
+      #+BEGIN_EXAMPLE
+      $ ln -s /path/to/stags/stags/stags.el ~/.emacs.d
+      $ echo "(require 'stags)" >> ~/.emacs.d/init.el
+      #+END_EXAMPLE
+
+   3. Try ~stags-visit-rootdir~ and ~stags-show-symbolinfo~
