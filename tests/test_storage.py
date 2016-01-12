@@ -6,7 +6,7 @@ from stags.storage import ShelveStorage as Storage
 from unittest import TestCase
 import os
 import sys
-from tempfile import mkstemp
+from tempfile import mkstemp, NamedTemporaryFile
 
 class TestShelveStorage(TestCase):
     def setup(self):

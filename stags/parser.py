@@ -258,6 +258,49 @@ def parse(filename, *args, **kwargs):
 
     return parsed_dict
 
+def remove(parsed_dict, filename):
+    logging.info('remove(parsed_dict, {})'.format(filename))
+    p = parsed_dict
+    logging.info('parsed_dict[{}] : {}'.format(filename, p[filename]))
+    for locus in p[filename]:
+        logging.info('# Removing {} in {}'.format(locus, filename))
+        entry = p[filename][locus]
+        logging.debug('p[{}][{}]'.format(filename, locus))
+        if USR in entry:
+            key = entry[USR]
+            value = p[key]
+            filename_locus = get_filename_locus(filename, locus)
+            # logging.debug('## Has USR: {}'.format(value))
+
+            removed = False
+            if DECL in value:
+                if filename_locus == value[DECL]:
+                    logging.debug('## Del ref[{}]'.format(DECL))
+                    del value[DECL]
+                    p[entry[USR]] = value
+                    removed = DECL
+            if DEFI in value:
+                if filename_locus == value[DEFI]:
+                    logging.debug('## Del ref[{}]'.format(DEFI))
+                    del value[DEFI]
+                    p[entry[USR]] = value
+                    removed = DEFI
+            assert removed in (DECL, DEFI)
+        elif REF_USR in entry:
+            key = entry[REF_USR]
+            value = p[key]
+            # logging.debug('## Has REF_USR: {}'.format(value))
+            filename_locus = get_filename_locus(filename, locus)
+
+            assert filename_locus in value[REFS]
+            refs = value[REFS]
+            refs = [item for item in refs if item != filename_locus]
+            p[key] = value
+            assert filename_locus not in refs
+        else:
+            assert False
+    del p[filename]
+
 if __name__ == '__main__':
     libclang_set_library_file()
     logging.basicConfig(level=logging.INFO)

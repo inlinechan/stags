@@ -10,6 +10,8 @@ from stags.project import Project
 import sys
 from stags.common import *
 from stags.query import query_class_hierarchy, query, Query
+from stags.storage import ShelveStorage as Storage
+from stags.parser import remove
 
 import logging
 
@@ -176,3 +178,30 @@ class TestFunctionTemplate(TestCmake):
         self.is_definition_of(p, self.template_usr, s['main.cpp'], '14:7', s['main.cpp'], '4:10')
         self.is_definition_of(p, self.template_usr, s['main.cpp'], '15:7', s['main.cpp'], '4:10')
         self.is_definition_of(p, self.template_usr, s['main.cpp'], '16:7', s['main.cpp'], '4:10')
+
+class TestRemove(TestCmake):
+    def test_remove(self):
+        parsed_dict, _ = self.run_dir(sys._getframe().f_code.co_name)
+        self.assertTrue(parsed_dict)
+
+        p = parsed_dict
+        remove(p, 'person.h')
+        self.assertFalse(p.has_key('person.h'))
+        self.assertNotIn(DEFI, p['c:@C@Person'])
+        self.assertNotIn(DECL, p['c:@C@Person@F@talk#'])
+
+    def test_remove_load_after_save(self):
+        parsed_dict, _ = self.run_dir(sys._getframe().f_code.co_name)
+        self.assertTrue(parsed_dict)
+        filename = sys._getframe().f_code.co_name + '.db'
+        d = Storage(filename)
+        d.close()
+
+        d = Storage(filename)
+        remove(parsed_dict, 'person.h')
+        d.update(parsed_dict)
+
+        p = parsed_dict
+        self.assertFalse(d.has_key('person.h'))
+        self.assertNotIn(DEFI, d['c:@C@Person'])
+        self.assertNotIn(DECL, d['c:@C@Person@F@talk#'])
