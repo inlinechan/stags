@@ -85,3 +85,75 @@ class TestShelveStorage(TestCase):
 
         os.remove(filename)
 
+    def test_save_and_delitem_dict(self):
+        src = {'1': 2, '3': 4}
+        filename = sys._getframe().f_code.co_name
+        d = Storage(filename, 'n')
+        d.update(src)
+        d.close()
+
+        d = Storage(filename)
+        del d['1']
+        self.assertFalse(d.has_key('1'))
+        self.assertTrue(d.has_key('3'))
+        d.close()
+
+        os.remove(filename)
+
+    def test_save_and_delitem_child_dict(self):
+        src = {'1': 2, 'child': {'3': 4, '5': 6}}
+        filename = sys._getframe().f_code.co_name
+        d = Storage(filename, 'n')
+        d.update(src)
+        d.close()
+
+        d = Storage(filename)
+        child = d['child']
+        del child['3']
+        self.assertFalse('3' in child)
+        d['child'] = child
+        self.assertFalse(d['child'].has_key('3'))
+        d.close()
+
+        d = Storage(filename, 'r')
+        self.assertFalse(d['child'].has_key('3'))
+        d.close()
+
+        os.remove(filename)
+
+    def test_save_and_update_dict(self):
+        src = {'1': 2, '3': 4}
+        filename = sys._getframe().f_code.co_name
+        d = Storage(filename, 'n')
+        d.update(src)
+        self.assertEqual(d['1'], 2)
+        self.assertEqual(d['3'], 4)
+        d.close()
+
+        d = Storage(filename)
+        new = {'1': 10, '3': 20}
+        d.update(new)
+        self.assertEqual(d['1'], 10)
+        self.assertEqual(d['3'], 20)
+        d.close()
+
+        os.remove(filename)
+
+    def test_save_and_update_not_delete_item_dict(self):
+        src = {'1': 2, '3': 4}
+        filename = sys._getframe().f_code.co_name
+        d = Storage(filename, 'n')
+        d.update(src)
+        self.assertEqual(d['1'], 2)
+        self.assertEqual(d['3'], 4)
+        d.close()
+
+        d = Storage(filename)
+        new = {'2': 10, '3': 20}
+        d.update(new)
+        self.assertTrue('1' in d) # does not delete '1'
+        self.assertEqual(d['2'], 10)
+        self.assertEqual(d['3'], 20)
+        d.close()
+
+        os.remove(filename)

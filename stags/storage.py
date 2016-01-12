@@ -18,6 +18,12 @@ class ShelveStorage(UserDict.DictMixin):
     def __getitem__(self, key):
         return self.dict[key]
 
+    def __delitem__(self, key):
+        self.dict.__delitem__(key)
+
+    def keys(self):
+        return self.dict.keys()
+
     def __del__(self):
         self.dict.close()
 
