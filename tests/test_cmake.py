@@ -11,7 +11,7 @@ import sys
 from stags.common import *
 from stags.query import query_class_hierarchy, query, Query
 from stags.storage import ShelveStorage as Storage
-from stags.parser import remove
+from stags.parser import remove, parse
 
 import logging
 
@@ -47,7 +47,7 @@ class TestCmake(TestCase):
         pp.pprint(p)
         return p[self.basename(filename)][locus][TEMPLATE_USR]
 
-    def run_dir(self, name):
+    def run_dir(self, name, filter = None):
         basedir = os.path.abspath('tests/{}'.format(name))
         if not basedir.endswith('/'):
             basedir += '/'
@@ -68,7 +68,22 @@ class TestCmake(TestCase):
                 self.sources[file] = os.path.join(root, file)
 
         self.basedir = basedir
-        return (proj.parse_all(proj.scan()), basedir)
+        files = proj.scan()
+        if filter:
+            files = [x for x in files if filter(x[0])]
+        return (proj.parse_all(files), basedir)
+
+    def patch_file(self, name, patch):
+        basedir = os.path.abspath('tests/{}'.format(name))
+        if not basedir.endswith('/'):
+            basedir += '/'
+        pobj = subprocess.Popen(['patch -p1 < {}'.format(patch)],
+                                cwd=basedir,
+                                shell=True,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        ret = pobj.wait()
+        self.assertEqual(ret, 0)
 
     def is_declaration_of(self, p, get_usr, file1, locus1, file2, locus2):
         self.assertEqual(self.value(p, get_usr(p, self.basename(file1), locus1), DECL),
@@ -205,3 +220,49 @@ class TestRemove(TestCmake):
         self.assertFalse(d.has_key('person.h'))
         self.assertNotIn(DEFI, d['c:@C@Person'])
         self.assertNotIn(DECL, d['c:@C@Person@F@talk#'])
+
+        os.remove(filename)
+
+    def test_remove_and_update(self):
+        name = sys._getframe().f_code.co_name
+
+        src = 'person.h'
+        orig = src + '.orig'
+        patch = src + '.patch'
+
+        basedir = os.path.abspath('tests/{}'.format(name))
+        if not basedir.endswith('/'):
+            basedir += '/'
+
+        import shutil
+        shutil.copyfile(os.path.join(basedir, orig), os.path.join(basedir, src))
+
+        parsed_dict, _ = self.run_dir(name)
+        self.assertTrue(parsed_dict)
+        filename = sys._getframe().f_code.co_name + '.db'
+        d = Storage(filename)
+        d.close()
+
+        d = Storage(filename)
+        remove(parsed_dict, src)
+        d.update(parsed_dict)
+
+        # patch and re-run
+        self.patch_file(name, patch)
+
+        import re
+        def is_matching_file(file):
+            logging.debug('src: {}, file: {}'.format(src, file))
+            return not re.match(src, file)
+
+        s = self.sources
+        new_parsed_dict, _ = self.run_dir(name, is_matching_file)
+        n = new_parsed_dict
+        self.assertTrue(n.has_key(src))
+        self.is_definition_of(n, self.usr, s[src], '5:7', s[src], '5:7')
+        self.is_definition_of(n, self.usr, s[src], '7:9', s[src], '7:9')
+        self.is_definition_of(n, self.usr, s[src], '8:10', s['person.cpp'], '3:14')
+        self.is_definition_of(n, self.ref_usr, s[src], '7:30', s[src], '11:9')
+
+        os.remove(filename)
+

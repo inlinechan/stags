@@ -1,0 +1,17 @@
+--- a/person.h	2016-01-12 10:48:34.050804903 +0900
++++ b/person.h	2016-01-12 13:44:42.914751095 +0900
+@@ -1,9 +1,14 @@
+ #ifndef PERSON_H
+ #define PERSON_H
+ 
++
+ class Person {
+   public:
++    int age() const { return age_; }
+     void talk();
++
++  private:
++    int age_;
+ };
+ 
+ #endif /* PERSON_H */
