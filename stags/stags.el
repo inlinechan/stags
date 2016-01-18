@@ -109,9 +109,6 @@ Notice that using \\[next-error] or \\[compile-goto-error] modifies
 (defun stags-get-db-name ()
   (expand-file-name (concat stags-rootdir "/stags.db")))
 
-(defun stags-get-query-executable ()
-  (expand-file-name "~/source/python/stags/stags/query.py"))
-
 (defun stags-find-reference ()
   (interactive)
   (stags-query "Reference"))
@@ -154,7 +151,8 @@ Notice that using \\[next-error] or \\[compile-goto-error] modifies
       (setq locus-fallback (format "%d:%d" (line-number-at-pos) (1+ (current-column)))))
     (set-buffer buffer)
     (setq status (call-process "python" nil t nil
-                               (stags-get-query-executable)
+                               "-m"
+                               "stags.query"
                                (stags-get-db-name)
                                type
                                (concat filename ":" locus)))
@@ -162,7 +160,8 @@ Notice that using \\[next-error] or \\[compile-goto-error] modifies
       (erase-buffer)
       (message "query failed(%d) try with locus-fallback: %s" status locus-fallback)
       (setq status (call-process "python" nil t nil
-                                 (stags-get-query-executable)
+                                 "-m"
+                                 "stags.query"
                                  (stags-get-db-name)
                                  type
                                  (concat filename ":" locus-fallback))))
