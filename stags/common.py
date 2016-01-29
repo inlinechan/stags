@@ -13,6 +13,8 @@ BASE_CLASS, CHILD_CLASS = (
     'base_class', 'child_class'
 )
 
+FILES = 'files'
+
 def libclang_set_library_file():
     # Higher version first
     LIBCLANG_VERSIONS_SUPPORTED = (3.5, 3.4)

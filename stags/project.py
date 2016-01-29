@@ -15,6 +15,7 @@ import parser
 import pprint
 import re
 import sys
+import time
 import util
 
 def parse_one(src, compiler, *args, **kwargs):
@@ -63,6 +64,37 @@ class Project:
             sources.extend(headers)
         return sources
 
+    def scan_modified(self, scanned_list, files):
+        if not files or not scanned_list:
+            return None
+
+        scanned_list_new = []
+        for src, others in scanned_list:
+            if self.has_file_modified_p(files, src):
+                scanned_list_new.append((src, others))
+        return scanned_list_new
+
+    @staticmethod
+    def get_files_from_db(dbname):
+        if os.path.exists(dbname):
+            parsed_dict = Storage(dbname, 'r')
+            files = parsed_dict.get(FILES, None)
+            logging.debug('get_files_from_db: dbname: {}, files: {}'.format(dbname, files))
+            parsed_dict.close()
+            return files
+        else:
+            return None
+
+    @staticmethod
+    def has_file_modified_p(files, src):
+        if os.path.exists(src):
+            time_file_modified = os.path.getmtime(src)
+            if src in files:
+                logging.debug('has_file_modified_p: {} > {}'.format(time_file_modified, files[src]))
+                if time_file_modified > files[src]:
+                    return True
+        return False
+
     @util.measure
     def parse_all(self, sources, **kwargs):
         # from http://eli.thegreenplace.net/2012/01/16/python-parallelizing-cpu-bound-tasks-with-multiprocessing
@@ -73,13 +105,16 @@ class Project:
         # sources = filter(lambda s: s[0].endswith('hello.cpp'), sources)
         def worker(dirname, jobs, out_q):
             result_dict = {}
+            files = {}
             for job in jobs:
                 filename = job[0]
                 result_dict[filename] = apply_parse(job, basedir = dirname, **kwargs)
+                files[filename] = time.time()
 
             parsed_dict = {}
             for result in result_dict.values():
                 merge_recurse_inplace(parsed_dict, result)
+            parsed_dict[FILES] = files
             out_q.put(parsed_dict)
 
         out_q = mp.Queue()
@@ -113,8 +148,12 @@ class Project:
     def parse_all_single(self, sources, **kwargs):
         pp = pprint.PrettyPrinter(indent=4)
         parsed_dict = {}
+        parsed_dict[FILES] = {}
         for job in sources:
+            filename = job[0]
             result = apply_parse(job, basedir = self.basedir, **kwargs)
+            result[FILES] = {}
+            result[FILES][filename] = time.time()
             merge_recurse_inplace(parsed_dict, result)
 
         parsed_dict['basedir'] = self.basedir
@@ -137,21 +176,44 @@ if __name__ == '__main__':
     import pprint
     pp = pprint.PrettyPrinter(indent=4)
 
+    dbname = 'stags.db'
     if action == 'scan':
         pp.pprint(project.scan())
         sys.exit(0)
+    elif action == 'new':
+        files = project.get_files_from_db(dbname)
+        if files:
+            scanned_list = project.scan()
+            pp.pprint(project.scan_modified(scanned_list, files))
+        else:
+            print('{} has no file modification data'.format(dbname))
+        sys.exit(0)
     elif action == 'parse':
-        parsed_dict = project.parse_all(project.scan())
+        scanned_list = project.scan()
+        files = project.get_files_from_db(dbname)
 
+        pp.pprint(files)
+
+        if files:
+            scanned_list = project.scan_modified(scanned_list, files)
+            logging.debug('scanned_list: {}'.format([x[0] for x in scanned_list]))
+
+        parsed_dict = project.parse_all(scanned_list)
         pp.pprint('Parsed {} in {} with keys'.format(len(parsed_dict), builddir))
         pp.pprint(parsed_dict.keys())
     elif action == 'parse_single':
-        parsed_dict = project.parse_all_single(project.scan(), debug=True)
+        scanned_list = project.scan()
+        files = project.get_files_from_db(dbname)
+
+        if files:
+            scanned_list = project.scan_modified(scanned_list, files)
+
+        parsed_dict = project.parse_all_single(scanned_list)
         pp.pprint('Parsed {} in {} with keys'.format(len(parsed_dict), builddir))
         pp.pprint(parsed_dict.keys())
 
-    dbname = 'stags.db'
-    storage = Storage(dbname)
+    storage = Storage(dbname, writeback=True)
     storage_update = util.measure(storage.update)
 
-    storage_update(parsed_dict)
+    merge_recurse_inplace(storage, parsed_dict, Storage)
+    storage.close()
