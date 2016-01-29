@@ -6,8 +6,8 @@ import UserDict
 import shelve
 
 class ShelveStorage(UserDict.DictMixin):
-    def __init__(self, filename, *args):
-        self.dict = shelve.open(filename, *args)
+    def __init__(self, filename, *args, **kwargs):
+        self.dict = shelve.open(filename, *args, **kwargs)
 
     def __setitem__(self, key, value):
         # cursor = self.dict[key]
