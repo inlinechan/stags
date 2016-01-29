@@ -91,7 +91,7 @@ class Project:
             time_file_modified = os.path.getmtime(src)
             if src in files:
                 logging.debug('has_file_modified_p: {} > {}'.format(time_file_modified, files[src]))
-                if time_file_modified > files[src]:
+                if int(time_file_modified) >= int(files[src]):
                     return True
         return False
 

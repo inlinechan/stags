@@ -14,6 +14,7 @@ from stags.storage import ShelveStorage as Storage
 from stags.parser import remove, parse
 
 import logging
+import time
 
 class TestCmake(TestCase):
     @classmethod
@@ -61,6 +62,7 @@ class TestCmake(TestCase):
         ret = pobj.wait()
         self.assertEqual(ret, 0)
         proj = Project(builddir, basedir)
+        self.proj = proj
 
         self.sources = {}
         for root, _, files in os.walk(basedir):
@@ -266,3 +268,40 @@ class TestRemove(TestCmake):
 
         os.remove(filename)
 
+class TestModified(TestCmake):
+    TEST_DIR = 'test_modified'
+
+    @staticmethod
+    def touch(filename):
+        with open(filename, 'a'):
+            os.utime(filename, None)
+
+    def scan_modified(self, files):
+        modified = self.proj.scan_modified(self.proj.scan(), files)
+        return modified
+
+    def test_modified_one(self):
+        parsed_dict, _ = self.run_dir(self.TEST_DIR)
+        self.assertIn(FILES, parsed_dict)
+        files = parsed_dict[FILES]
+
+        base_h = self.sources['base.h']
+        self.touch(base_h)
+        modified = [x[0] for x in self.scan_modified(files)]
+
+        self.assertIn(base_h, modified)
+
+    def test_modified_two(self):
+        parsed_dict, _ = self.run_dir(self.TEST_DIR)
+        self.assertIn(FILES, parsed_dict)
+        files = parsed_dict[FILES]
+
+        touches = ('base.h', 'base.cpp')
+        for touch in touches:
+            self.touch(self.sources[touch])
+
+        modified = [x[0] for x in self.scan_modified(files)]
+
+        self.assertEqual(2, len(modified))
+        for file in modified:
+            self.assertIn(file, modified)
