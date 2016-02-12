@@ -25,4 +25,8 @@ def libclang_set_library_file():
             clang.cindex.Config.set_library_file(libclang_so)
             return True
             # clang.cindex.Config.set_library_file('/usr/lib/llvm-3.5/lib/libclang.so')
+    libclang_dylib = '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib'
+    if os.path.isfile(libclang_dylib):
+        clang.cindex.Config.set_library_file(libclang_dylib)
+        return True
     return False
