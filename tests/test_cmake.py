@@ -202,14 +202,20 @@ class TestRemove(TestCmake):
         self.assertTrue(parsed_dict)
 
         p = parsed_dict
+        person_usr = self.usr(p, self.basename(self.sources['person.h']), '4:7')
+        person_talk_usr = self.usr(p, self.basename(self.sources['person.h']), '6:10')
         remove(p, 'person.h')
         self.assertFalse(p.has_key('person.h'))
-        self.assertNotIn(DEFI, p['c:@C@Person'])
-        self.assertNotIn(DECL, p['c:@C@Person@F@talk#'])
+        self.assertNotIn(DEFI, p[person_usr])
+        self.assertNotIn(DECL, p[person_talk_usr])
 
     def test_remove_load_after_save(self):
         parsed_dict, _ = self.run_dir(sys._getframe().f_code.co_name)
         self.assertTrue(parsed_dict)
+
+        person_usr = self.usr(parsed_dict, self.basename(self.sources['person.h']), '4:7')
+        person_talk_usr = self.usr(parsed_dict, self.basename(self.sources['person.h']), '6:10')
+
         filename = sys._getframe().f_code.co_name + '.db'
         d = Storage(filename)
         d.close()
@@ -220,8 +226,8 @@ class TestRemove(TestCmake):
 
         p = parsed_dict
         self.assertFalse(d.has_key('person.h'))
-        self.assertNotIn(DEFI, d['c:@C@Person'])
-        self.assertNotIn(DECL, d['c:@C@Person@F@talk#'])
+        self.assertNotIn(DEFI, d[person_usr])
+        self.assertNotIn(DECL, d[person_talk_usr])
 
         os.remove(filename)
 
